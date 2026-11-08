@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>checkpoint modes</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --panel: #fff; --ink: #1b1f24; --muted: #5d6671; --line: #dde1e6;
+    --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --accent: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  main { width: 1120px; height: 300px; padding: 22px 28px; }
+  h1 { margin: 0 0 12px; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 16px; height: 220px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px; border: 1px solid currentColor; }
+  .tag.ok { color: var(--ok); } .tag.warn { color: var(--warn); } .tag.bad { color: var(--bad); }
+  h2 { margin: 10px 0 6px; font-size: 20px; letter-spacing: -0.02em; }
+  p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+  .rule { font-size: 14px; font-weight: 650; }
+</style>
+</head>
+<body>
+<main>
+  <h1>The job says how it may be stopped</h1>
+  <div class="row">
+    <div class="card">
+      <span class="tag ok">restartable</span>
+      <h2>Stop and start again</h2>
+      <p>Same command. State lives outside the process. A model server is this mode.</p>
+      <div class="rule">SIGTERM, then requeue.</div>
+    </div>
+    <div class="card">
+      <span class="tag warn">cooperative</span>
+      <h2>Save, then resume</h2>
+      <p>On SIGUSR1 the job writes its own checkpoint, then READY, then exits 0.</p>
+      <div class="rule">One signal. No kill to force a save.</div>
+    </div>
+    <div class="card">
+      <span class="tag bad">atomic</span>
+      <h2>Run to the end</h2>
+      <p>The safe default. A 24 hour job that cannot save is not sliced at midnight.</p>
+      <div class="rule">Once started, never signaled.</div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

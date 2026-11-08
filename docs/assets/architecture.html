@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gpu-scheduler architecture</title>
+<style>
+  :root {
+    --bg: #f4f6f8; --panel: #ffffff; --ink: #1b1f24; --muted: #5d6671; --line: #dde1e6;
+    --accent: #2563eb; --ok: #15803d; --warn: #b45309; --mem: #7c3aed; --night: #4338ca;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+  main { width: 1120px; height: 548px; padding: 26px 32px 20px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 680; letter-spacing: -0.02em; }
+  .sub { margin: 4px 0 18px; color: var(--muted); font-size: 14px; }
+  .row { display: flex; gap: 14px; align-items: stretch; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 6px; }
+  .doors { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .door b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .door span { color: var(--muted); font-size: 13px; }
+  .arrow { text-align: center; color: var(--accent); font-size: 13px; font-weight: 650; margin: 8px 0; letter-spacing: .02em; }
+  .daemon { display: grid; grid-template-columns: 1.4fr .9fr; gap: 12px; }
+  .daemon h2 { margin: 0 0 8px; font-size: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; font-weight: 650; border-radius: 999px; padding: 2px 8px; border: 1px solid currentColor; }
+  .chip.mem { color: var(--mem); } .chip.gpu { color: var(--accent); } .chip.ok { color: var(--ok); } .chip.warn { color: var(--warn); }
+  .queues { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .q { border-radius: 8px; padding: 8px 10px; background: #f8fafc; border: 1px solid var(--line); }
+  .q strong { display: block; font-size: 13px; }
+  .q span { color: var(--muted); font-size: 12px; }
+  .q.night { background: #eef2ff; border-color: #c7d2fe; }
+  .slot { border: 2px solid var(--accent); border-radius: 12px; padding: 12px 14px; background: #eff6ff; }
+  .slot b { font-size: 15px; }
+  .job { margin-top: 8px; background: white; border-radius: 8px; padding: 8px 10px; border: 1px solid #bfdbfe; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  .side { font-size: 13px; color: var(--muted); }
+  .side b { color: var(--ink); }
+  ul { margin: 8px 0 0; padding-left: 16px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>gpu-scheduler</h1>
+  <p class="sub">One daemon. One JSON job. The machine admits it only when the memory fits.</p>
+  <div class="doors">
+    <div class="card door"><p class="k">Door</p><b>gsched CLI</b><span>Shells, cron, CI. Waiting costs no tokens.</span></div>
+    <div class="card door"><p class="k">Door</p><b>MCP</b><span>stdio proxy. Forwards the job. Does not rank it.</span></div>
+    <div class="card door"><p class="k">Door</p><b>gsched exec</b><span>Wraps a LaunchAgent. Same process group as before.</span></div>
+  </div>
+  <div class="arrow">gpu-scheduler.job.v1 &nbsp;→&nbsp; Unix socket, mode 0600</div>
+  <div class="daemon">
+    <div class="card">
+      <h2>gsched daemon</h2>
+      <div class="chips">
+        <span class="chip mem">memory ledger</span>
+        <span class="chip gpu">one exclusive GPU</span>
+        <span class="chip ok">live phys_footprint</span>
+        <span class="chip warn">swap and pressure</span>
+      </div>
+      <div class="queues">
+        <div class="q"><strong>Day queue</strong><span>Short and interactive. Eligible any hour.</span></div>
+        <div class="q night"><strong>Night queue</strong><span>Estimates over 2 h. 23:00–08:00.</span></div>
+      </div>
+    </div>
+    <div class="slot">
+      <p class="k">Admitted</p>
+      <b>One heavy slot</b>
+      <div class="job">train.py · atomic · 20 GiB<br>blocked_by is empty</div>
+      <p class="side" style="margin:8px 0 0">A resident model unloads. An atomic job is left alone.</p>
+    </div>
+  </div>
+  <p class="side" style="margin:14px 4px 0">A hand-started llama-server is recorded and new GPU admits stop. That process is not signaled. SQLite commits before the job is allowed to start.</p>
+</main>
+</body>
+</html>
