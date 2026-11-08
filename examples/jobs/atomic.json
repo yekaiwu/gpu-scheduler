@@ -1,0 +1,12 @@
+{
+  "schema": "gpu-scheduler.job.v1",
+  "project": "example-train",
+  "name": "train-baseline",
+  "command": ["python3", "train.py", "--epochs", "3"],
+  "cwd": "/path/to/repo",
+  "env": {"WANDB_MODE": "offline"},
+  "resources": {"memory_gib": 20, "gpu": "exclusive", "cpu_cores": 4},
+  "runtime": {"estimate_s": 14400},
+  "checkpoint": "atomic",
+  "comment": "Atomic: runs to the end, never signaled by policy."
+}

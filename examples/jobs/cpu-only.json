@@ -1,0 +1,4 @@
+{"schema":"gpu-scheduler.job.v1","project":"example-train","name":"tokenize",
+ "command":["python3","prep.py"],"cwd":"/path/to/repo",
+ "resources":{"memory_gib":12,"gpu":"none","cpu_cores":8},
+ "runtime":{"estimate_s":1800},"checkpoint":"restartable"}

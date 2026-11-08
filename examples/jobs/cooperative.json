@@ -1,0 +1,13 @@
+{
+  "schema": "gpu-scheduler.job.v1",
+  "project": "example-train",
+  "name": "counter",
+  "command": ["python3", "examples/checkpoint_counter.py", "--steps", "100000", "--step-s", "1"],
+  "cwd": "/path/to/gpu-scheduler",
+  "resources": {"memory_gib": 1, "gpu": "none"},
+  "runtime": {"estimate_s": 86400},
+  "queue": "auto",
+  "checkpoint": "cooperative",
+  "grace_s": 120,
+  "comment": "estimate_s 24h sends it to the night queue. It checkpoints on SIGUSR1 at the morning edge and resumes tonight."
+}

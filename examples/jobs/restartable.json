@@ -1,0 +1,11 @@
+{
+  "schema": "gpu-scheduler.job.v1",
+  "project": "example-train",
+  "name": "embed-worker",
+  "command": ["python3", "worker.py", "--queue", "embeddings"],
+  "cwd": "/path/to/repo",
+  "resources": {"memory_gib": 8, "gpu": "shared", "cpu_cores": 2},
+  "checkpoint": "restartable",
+  "priority": -10,
+  "comment": "Restartable: may be stopped (TERM then KILL) and started again from the same argv."
+}

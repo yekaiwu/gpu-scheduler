@@ -1,0 +1,23 @@
+{
+  "name": "llama-server.example",
+  "project": "example-train",
+  "spec": {
+    "command": ["${LLM_ROOT}/start-llama.sh"],
+    "cwd": "${LLM_ROOT}",
+    "env": {},
+    "resources": {"memory_gib": 27, "gpu": "exclusive", "cpu_cores": 2},
+    "priority": 10
+  },
+  "listen_port": 8081,
+  "health_url": "http://127.0.0.1:8081/health",
+  "slots_url": "http://127.0.0.1:8081/slots",
+  "health_bearer_file": null,
+  "idle_unload_s": 1800,
+  "hold": false,
+  "admit": true,
+  "reason": null,
+  "abort_level_below": null,
+  "abort_reclaimable_below_gib": null,
+  "abort_swap_rise_gib": null,
+  "abort_ceiling_gib": null
+}

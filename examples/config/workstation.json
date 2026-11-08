@@ -1,0 +1,7 @@
+{
+  "enforce": true,
+  "night_window": {"start": "23:00", "end": "08:00"},
+  "backfill": false,
+  "day_max_s": 7200,
+  "preempt_restartable": false
+}

@@ -1,0 +1,1 @@
+{ "name": "example-train", "weight": 1, "mcp_submit": true, "mcp_terminate": false, "default_cwd": null }
