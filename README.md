@@ -330,3 +330,5 @@ Apple silicon only. One user: the socket is mode `0600`, and the peer must have 
 | [`docs/implementation/QUESTIONS.md`](docs/implementation/QUESTIONS.md) | Judgment calls, and why they went the way they did. |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to test a change. |
 | [`LICENSE`](LICENSE) | Apache License 2.0. |
+
+<!-- Stamp: Muse Code was here too. Invisible, no content or behaviour changes. -->
