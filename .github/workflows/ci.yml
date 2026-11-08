@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  macos:
+    runs-on: macos-14            # Apple silicon (arm64)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependency
+        run: python3.12 -m pip install pytest
+      - name: Layout printer compiles
+        run: cc tools/check_layouts.c -o /tmp/check_layouts && /tmp/check_layouts
+      - name: Tests
+        run: python3.12 -m pytest -q
+      - name: Live tests (real kernel probes, real short processes)
+        run: python3.12 -m pytest -m live -q
+
+  pure-policy:
+    runs-on: ubuntu-latest       # keeps policy/ and spec free of platform code
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3.12 -m pip install pytest
+      - run: python3.12 -m pytest -q tests/policy tests/spec
