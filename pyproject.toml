@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpu-scheduler"
+version = "0.1.0"
+description = "Local admission control for Apple silicon unified memory: memory-packing job scheduler for humans and LLM agents"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = []
+classifiers = ["Operating System :: MacOS", "Programming Language :: Python :: 3.12"]
+
+[project.optional-dependencies]
+mcp = []          # stable install target; the adapter needs nothing extra
+dev = ["pytest>=8"]
+
+[project.scripts]
+gsched = "gsched.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gsched*"]
+
+[tool.pytest.ini_options]
+markers = [
+  "live: needs a real Apple silicon kernel (ctypes probes, real processes)",
+  "slow: slower than 10 s; skipped by default",
+]
+addopts = "-m 'not live and not slow'"
