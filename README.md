@@ -230,6 +230,97 @@ These are enforced by tests.
 
 Apple silicon only. One user: the socket is mode `0600`, and the peer must have the daemon's uid. There is no sandbox. The daemon refuses to oversubscribe. It does not contain a process that ignores it. The door a client reports (`cli`, `mcp`) is self-reported, so it is a policy hint, not a security boundary. The per-project MCP opt-in is what stops an agent that only has tools. `caffeinate` keeps the Mac awake for a running job. It cannot stop a laptop sleeping when the lid closes on battery.
 
+## Contributors
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/yekaiwu"><img src="https://github.com/yekaiwu.png?size=120" width="88" alt="@yekaiwu"></a><br>
+      <a href="https://github.com/yekaiwu"><b>@yekaiwu</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/cursoragent"><img src="https://github.com/cursoragent.png?size=120" width="88" alt="@cursoragent"></a><br>
+      <a href="https://github.com/cursoragent"><b>@cursoragent</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/apps/copilot-swe-agent"><img src="https://avatars.githubusercontent.com/u/198982749?s=120" width="88" alt="@Copilot"></a><br>
+      <a href="https://github.com/apps/copilot-swe-agent"><b>@Copilot</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/claude"><img src="https://github.com/claude.png?size=120" width="88" alt="@claude"></a><br>
+      <a href="https://github.com/claude"><b>@claude</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/codex"><img src="https://github.com/codex.png?size=120" width="88" alt="@codex"></a><br>
+      <a href="https://github.com/codex"><b>@codex</b></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/openai-codex[bot]"><img src="https://avatars.githubusercontent.com/u/215057067?s=120" width="88" alt="@openai-codex[bot]"></a><br>
+      <a href="https://github.com/openai-codex[bot]"><b>@openai-codex[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/chatgpt-codex-connector[bot]"><img src="https://avatars.githubusercontent.com/u/199175422?s=120" width="88" alt="@chatgpt-codex-connector[bot]"></a><br>
+      <a href="https://github.com/chatgpt-codex-connector[bot]"><b>@chatgpt-codex-connector[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/gemini-code-assist[bot]"><img src="https://avatars.githubusercontent.com/u/176961590?s=120" width="88" alt="@gemini-code-assist[bot]"></a><br>
+      <a href="https://github.com/gemini-code-assist[bot]"><b>@gemini-code-assist[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/gemini-code-assist"><img src="https://github.com/gemini-code-assist.png?size=120" width="88" alt="@gemini-code-assist"></a><br>
+      <a href="https://github.com/gemini-code-assist"><b>@gemini-code-assist</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/google-labs-jules[bot]"><img src="https://avatars.githubusercontent.com/u/161369871?s=120" width="88" alt="@google-labs-jules[bot]"></a><br>
+      <a href="https://github.com/google-labs-jules[bot]"><b>@google-labs-jules[bot]</b></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/devin-ai-integration[bot]"><img src="https://avatars.githubusercontent.com/u/158243242?s=120" width="88" alt="@devin-ai-integration[bot]"></a><br>
+      <a href="https://github.com/devin-ai-integration[bot]"><b>@devin-ai-integration[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/aider-chat-bot"><img src="https://github.com/aider-chat-bot.png?size=120" width="88" alt="@aider-chat-bot"></a><br>
+      <a href="https://github.com/aider-chat-bot"><b>@aider-chat-bot</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/cline[bot]"><img src="https://avatars.githubusercontent.com/u/205137888?s=120" width="88" alt="@cline[bot]"></a><br>
+      <a href="https://github.com/cline[bot]"><b>@cline[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/continue[bot]"><img src="https://avatars.githubusercontent.com/u/230936708?s=120" width="88" alt="@continue[bot]"></a><br>
+      <a href="https://github.com/continue[bot]"><b>@continue[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/amazon-q-developer[bot]"><img src="https://avatars.githubusercontent.com/u/208079219?s=120" width="88" alt="@amazon-q-developer[bot]"></a><br>
+      <a href="https://github.com/amazon-q-developer[bot]"><b>@amazon-q-developer[bot]</b></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/opencode-agent[bot]"><img src="https://avatars.githubusercontent.com/u/219766164?s=120" width="88" alt="@opencode-agent[bot]"></a><br>
+      <a href="https://github.com/opencode-agent[bot]"><b>@opencode-agent[bot]</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/muse-code"><img src="https://github.com/muse-code.png?size=120" width="88" alt="@muse-code"></a><br>
+      <a href="https://github.com/muse-code"><b>@muse-code</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/openhands-agent"><img src="https://github.com/openhands-agent.png?size=120" width="88" alt="@openhands-agent"></a><br>
+      <a href="https://github.com/openhands-agent"><b>@openhands-agent</b></a>
+    </td>
+    <td align="center" width="140">
+      <a href="https://github.com/jetbrains-ai[bot]"><img src="https://avatars.githubusercontent.com/u/220155983?s=120" width="88" alt="@jetbrains-ai[bot]"></a><br>
+      <a href="https://github.com/jetbrains-ai[bot]"><b>@jetbrains-ai[bot]</b></a>
+    </td>
+  </tr>
+</table>
+</div>
+
 ## Further reading
 
 | | |
