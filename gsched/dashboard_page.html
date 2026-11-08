@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gsched dashboard</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5d6671; --line: #dde1e6;
+  --accent: #2563eb; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --info: #0e7490;
+  --c-mem: #7c3aed; --c-gpu: #2563eb; --c-cpu: #0f766e; --c-lock: #a16207; --c-time: #475569; --c-policy: #be185d;
+  --bar-reserved: #4f46e5; --bar-free: #e5e7eb; --amber-bg: #fef3c7; --amber-ink: #92400e;
+  --shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216; --panel: #181c22; --ink: #e6e9ee; --muted: #9aa4b1; --line: #2a303a;
+    --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --info: #22d3ee;
+    --c-mem: #a78bfa; --c-gpu: #60a5fa; --c-cpu: #2dd4bf; --c-lock: #facc15; --c-time: #94a3b8; --c-policy: #f472b6;
+    --bar-reserved: #818cf8; --bar-free: #2a303a; --amber-bg: #3b2f0b; --amber-ink: #fcd34d;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; }
+code, pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+.mono { white-space: nowrap; }
+main { max-width: 1280px; margin: 0 auto; padding: 12px 16px 48px; }
+h1 { font-size: 16px; margin: 0; font-weight: 650; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 22px 0 8px; font-weight: 650; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+#banner { display: none; background: var(--bad); color: #fff; padding: 8px 14px; border-radius: 8px; margin: 10px 0; font-weight: 600; }
+header.strip { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 0; }
+header.strip .machine { color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); }
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.warn { color: var(--warn); border-color: var(--warn); }
+.badge.bad { color: var(--bad); border-color: var(--bad); }
+.badge.amber { background: var(--amber-bg); color: var(--amber-ink); border-color: transparent; }
+.cards { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
+.cards > * { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 960px) { .cards { grid-template-columns: 1fr 1fr; } .cards .wide { grid-column: 1 / -1; } }
+@media (max-width: 720px) { .cards { grid-template-columns: minmax(0, 1fr); } main { padding: 8px 10px 40px; } .events li { flex-wrap: wrap; } .events .k { min-width: 0; } }
+.card h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.big { font-size: 22px; font-weight: 650; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.bar { position: relative; height: 16px; border-radius: 5px; background: var(--bar-free); overflow: hidden; display: flex; }
+.bar.thin { height: 8px; margin-top: 8px; }
+.bar .seg { height: 100%; }
+.seg.reserved { background: var(--bar-reserved); }
+.seg.pending { background: repeating-linear-gradient(45deg, var(--bar-reserved) 0 4px, transparent 4px 8px); opacity: .75; }
+.seg.free { background: transparent; }
+.seg.live { background: var(--ok); opacity: .8; }
+.marker { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr.row { cursor: pointer; }
+tr.row:hover, tr.row:focus { background: color-mix(in srgb, var(--accent) 8%, transparent); outline: none; }
+.empty { color: var(--muted); padding: 10px 8px; }
+.chip { display: inline-block; padding: 0 7px; border-radius: 5px; font-size: 11.5px; font-weight: 600; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
+.chip.mem { color: var(--c-mem); } .chip.gpu { color: var(--c-gpu); } .chip.cpu { color: var(--c-cpu); }
+.chip.lock { color: var(--c-lock); } .chip.time { color: var(--c-time); } .chip.policy { color: var(--c-policy); }
+.chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); } .chip.warn { color: var(--warn); } .chip.plain { color: var(--muted); }
+.mini { position: relative; width: 120px; height: 8px; background: var(--bar-free); border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.mini > span { display: block; height: 100%; background: var(--ok); }
+.mini.over > span { background: var(--bad); }
+.mini.overrun > span { background: repeating-linear-gradient(45deg, var(--warn) 0 5px, transparent 5px 10px); }
+.why { color: var(--muted); font-size: 12.5px; }
+.copy { cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 5px; font-size: 12px; padding: 0 6px; }
+.copy:focus-visible, .tab:focus-visible, .close:focus-visible { outline: 2px solid var(--accent); }
+svg#tl { width: 100%; height: auto; display: block; }
+svg text { fill: var(--muted); font-size: 10px; }
+.events li { padding: 3px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+.events { list-style: none; padding: 0; margin: 0; max-height: 360px; overflow: auto; }
+.events time { color: var(--muted); white-space: nowrap; min-width: 62px; }
+.events .k { font-weight: 600; min-width: 150px; }
+.events .b { color: var(--muted); overflow-wrap: anywhere; }
+#drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--panel); border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0,0,0,.2); padding: 14px 16px; overflow: auto; display: none; z-index: 10; }
+#drawer.open { display: block; }
+#drawer h3 { margin: 0 0 4px; font-size: 14px; }
+.close { float: right; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 3px 10px; margin: 10px 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 6px; margin: 10px 0 6px; align-items: center; }
+.tab { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+pre#log { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; max-height: 320px; overflow: auto; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cmds { margin-top: 10px; display: grid; gap: 4px; }
+.cmds div { display: flex; gap: 6px; align-items: center; }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <div id="banner" role="alert">The gsched daemon is not reachable. Retrying...</div>
+
+  <header class="strip">
+    <h1>gsched</h1>
+    <span class="machine" id="machine"></span>
+    <span class="badges" id="badges"></span>
+  </header>
+
+  <section class="cards" aria-label="Capacity">
+    <div class="panel card wide" id="card-mem">
+      <h3>Memory</h3>
+      <div class="big" id="mem-big">-</div>
+      <div class="bar" id="mem-bar" role="img" aria-label="Memory budget usage"></div>
+      <div class="legend" id="mem-legend"></div>
+      <div class="sub" style="margin-top:8px">Live gate (reclaimable - pending - headroom) vs. the top queued job</div>
+      <div class="bar thin" id="live-bar" role="img" aria-label="Live free memory"></div>
+      <div class="sub" id="live-text"></div>
+    </div>
+    <div class="panel card" id="card-gpu"><h3>GPU</h3><div class="big" id="gpu-big">-</div><div class="sub" id="gpu-sub"></div></div>
+    <div class="panel card" id="card-cpu"><h3>CPU</h3><div class="big" id="cpu-big">-</div><div class="sub" id="cpu-sub"></div>
+      <div class="bar thin" id="cpu-bar"></div></div>
+    <div class="panel card" id="card-swap"><h3>Swap</h3><div class="big" id="swap-big">-</div><div class="sub" id="swap-sub"></div></div>
+  </section>
+
+  <h2>Running</h2>
+  <div class="panel table-wrap"><table aria-label="Running jobs">
+    <thead><tr><th scope="col">Job</th><th scope="col">Project</th><th scope="col">Name</th><th scope="col">Mode</th><th scope="col">GPU</th>
+      <th scope="col">Footprint / reserved</th><th scope="col">Runtime</th><th scope="col">State</th><th scope="col">Flags</th></tr></thead>
+    <tbody id="running"></tbody></table></div>
+
+  <h2>Queue</h2>
+  <div class="panel table-wrap"><table aria-label="Queued jobs">
+    <thead><tr><th scope="col">#</th><th scope="col">Job</th><th scope="col">Project</th><th scope="col">Name</th><th scope="col">Pri</th>
+      <th scope="col">Queue</th><th scope="col">Ask</th><th scope="col">Waiting</th><th scope="col">Blocked by</th><th scope="col">Why</th></tr></thead>
+    <tbody id="queue"></tbody></table></div>
+
+  <h2>Memory timeline (6 h)</h2>
+  <div class="panel">
+    <svg id="tl" viewBox="0 0 900 230" role="img" aria-label="Memory timeline"></svg>
+    <div class="legend" id="tl-legend"></div>
+  </div>
+
+  <h2>Recent (24 h)</h2>
+  <div class="panel table-wrap"><table aria-label="Recently finished jobs">
+    <thead><tr><th scope="col">Job</th><th scope="col">Project</th><th scope="col">Name</th><th scope="col">State</th><th scope="col">Runtime</th>
+      <th scope="col">Peak / requested</th><th scope="col">Why it ended</th></tr></thead>
+    <tbody id="recent"></tbody></table></div>
+
+  <h2>Events</h2>
+  <div class="panel"><ul class="events" id="events"></ul></div>
+
+  <footer>Read-only view. Actions are available only through the <code>gsched</code> CLI.</footer>
+</main>
+
+<aside id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1">
+  <button class="close" id="drawer-close" aria-label="Close job details (Esc)">Close</button>
+  <h3 id="drawer-title">Job</h3>
+  <div id="drawer-body"></div>
+</aside>
+
+<script>
+"use strict";
+(function () {
+  var params = new URLSearchParams(location.search);
+  var TOKEN = params.get("t");
+  var GIB = 1;
+  var state = { status: null, jobs: null, timeline: [], events: [], drawerJob: null, logStream: "stdout" };
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "text") e.textContent = attrs[k];
+      else if (k === "title") e.title = attrs[k];
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function fmtG(v, d) { return v == null ? "-" : Number(v).toFixed(d == null ? 1 : d) + " GiB"; }
+  function fmtDur(s) {
+    if (s == null) return "-";
+    s = Math.max(0, Math.round(s));
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    if (d) return d + "d" + String(h).padStart(2, "0") + "h";
+    if (h) return h + "h" + String(m).padStart(2, "0") + "m";
+    if (m) return m + "m" + String(sec).padStart(2, "0") + "s";
+    return sec + "s";
+  }
+  function shortId(id) { return id ? id.slice(9) : ""; }
+  function clock(ms) { var d = new Date(ms); return d.toTimeString().slice(0, 8); }
+  function pct(a, b) { return b > 0 ? Math.max(0, Math.min(100, a / b * 100)) : 0; }
+  function api(path) {
+    var url = path;
+    if (TOKEN) url += (path.indexOf("?") >= 0 ? "&" : "?") + "t=" + encodeURIComponent(TOKEN);
+    return fetch(url, { cache: "no-store", credentials: "same-origin" }).then(function (r) {
+      if (r.status === 503) throw new Error("daemon_unreachable");
+      if (!r.ok) throw new Error("http_" + r.status);
+      return r;
+    });
+  }
+  function chip(text, cls, title) { return el("span", { class: "chip " + (cls || "plain"), text: text, title: title || text }); }
+  function blockClass(code) {
+    if (/^memory_|^level$|^swap_unknown$/.test(code)) return "mem";
+    if (code === "gpu") return "gpu";
+    if (code === "cpu") return "cpu";
+    if (code.indexOf("lock:") === 0) return "lock";
+    if (code === "window" || code === "fit_window" || code === "no_start_waiter" || code.indexOf("reservation_window:") === 0) return "time";
+    return "policy";
+  }
+  function copyButton(text) {
+    return el("button", { class: "copy", type: "button", title: "Copy to clipboard", text: "copy", onclick: function (ev) {
+      ev.stopPropagation();
+      if (navigator.clipboard) navigator.clipboard.writeText(text);
+    } });
+  }
+  function openOnKey(fn) { return function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); fn(); } }; }
+  function rowFor(id, cells) {
+    var tr = el("tr", { class: "row", tabindex: "0", title: "Open " + id, onclick: function () { openDrawer(id); },
+                        onkeydown: openOnKey(function () { openDrawer(id); }) }, cells);
+    return tr;
+  }
+  function td(content, cls) {
+    var c = el("td", cls ? { class: cls } : null);
+    if (content != null) c.appendChild(typeof content === "string" ? document.createTextNode(content) : content);
+    return c;
+  }
+
+  // ---------- header ----------
+  function renderHeader() {
+    var s = state.status; if (!s) return;
+    var m = s.machine;
+    $("machine").textContent = m.chip + " - " + m.memsize_gib + " GiB - macOS " + m.os;
+    var b = $("badges"); clear(b);
+    b.appendChild(s.enforce ? el("span", { class: "badge ok", text: "ENFORCE" })
+                            : el("span", { class: "badge amber", text: "OBSERVE", title: "enforce is off: nothing is scheduled" }));
+    b.appendChild(el("span", { class: "badge " + (s.pressure === "normal" ? "ok" : s.pressure === "warn" ? "warn" : "bad"), text: "pressure " + s.pressure }));
+    if (s.protective) b.appendChild(el("span", { class: "badge bad", text: "PROTECTIVE", title: "a foreign GPU-heavy process is running" }));
+    if (s.draining) b.appendChild(el("span", { class: "badge warn", text: "DRAINING" }));
+    if (s.sleep_prevented) b.appendChild(el("span", { class: "badge", text: "sleep prevented" }));
+    var nw = s.night_window;
+    if (nw) {
+      var now = s.now_ms, txt;
+      if (nw.in_night) txt = "morning edge in " + fmtDur((nw.next_end_ms - now) / 1000);
+      else txt = "night in " + fmtDur((nw.next_start_ms - now) / 1000);
+      b.appendChild(el("span", { class: "badge", text: txt, title: "night window " + nw.start + "-" + nw.end + " (" + nw.tz + ")" }));
+    } else {
+      b.appendChild(el("span", { class: "badge", text: "no night window" }));
+    }
+    (s.reservations || []).forEach(function (r) {
+      var now2 = s.now_ms;
+      if (r.active) b.appendChild(el("span", { class: "badge warn", text: "window " + r.name + " until " + clock(r.next_end_ms).slice(0, 5),
+        title: "time reservation " + r.name + " " + r.start + "-" + r.end + ": holds " + fmtG(r.memory_gib, 0) + (r.gpu !== "none" ? " + GPU" : "") + " for " + r.project + "; " + fmtG(r.reserve_remaining_gib, 1) + " still unclaimed" }));
+      else if (r.next_start_ms != null && r.next_start_ms - now2 < 24 * 3600 * 1000)
+        b.appendChild(el("span", { class: "badge", text: "window " + r.name + " in " + fmtDur((r.next_start_ms - now2) / 1000),
+          title: "time reservation " + r.name + " " + r.start + "-" + r.end + " for " + r.project }));
+    });
+    if (s.reservation) b.appendChild(el("span", { class: "badge warn", text: "reservation " + shortId(s.reservation) }));
+    (s.yield_apps || []).forEach(function (a) {
+      var since = a.since_ms ? " since " + clock(a.since_ms).slice(0, 5) : "";
+      if (a.phase === "closed")
+        b.appendChild(el("span", { class: "badge warn", text: a.name + " closed" + since,
+          title: a.app + " was quit by the scheduler for " + (a.reason || "a heavy job") + " (freed about " + fmtG(a.freed_gib, 1) + "); it reopens when that is over" }));
+      else if (a.phase === "quitting" || a.phase === "reopening" || a.phase === "busy_check")
+        b.appendChild(el("span", { class: "badge", text: a.name + " " + a.phase.replace("_", " "), title: a.app }));
+    });
+  }
+
+  // ---------- capacity ----------
+  function seg(cls, widthPct, title) { return el("div", { class: "seg " + cls, style: "width:" + widthPct + "%", title: title }); }
+  function renderCards() {
+    var s = state.status; if (!s) return;
+    var mem = s.memory, budget = mem.budget_gib;
+    var solid = Math.max(0, mem.reserved_gib - mem.pending_gib), pend = Math.min(mem.pending_gib, mem.reserved_gib);
+    var free = Math.max(0, budget - mem.reserved_gib);
+    $("mem-big").textContent = fmtG(mem.reserved_gib) + " reserved of " + fmtG(budget);
+    var bar = $("mem-bar"); clear(bar);
+    bar.appendChild(seg("reserved", pct(solid, budget), "touched: " + fmtG(solid)));
+    bar.appendChild(seg("pending", pct(pend, budget), "reserved but not yet touched: " + fmtG(pend)));
+    bar.appendChild(seg("free", pct(free, budget), "free budget: " + fmtG(free)));
+    var lg = $("mem-legend"); clear(lg);
+    [["var(--bar-reserved)", "in use " + fmtG(solid)], ["repeating-linear-gradient(45deg,var(--bar-reserved) 0 3px,transparent 3px 6px)", "pending " + fmtG(pend)],
+     ["var(--bar-free)", "free budget " + fmtG(free)]].forEach(function (x) {
+      var sp = el("span"); var i = el("i"); i.style.background = x[0]; sp.appendChild(i); sp.appendChild(document.createTextNode(x[1])); lg.appendChild(sp);
+    });
+    // live bar: reclaimable vs machine memory, marker = the need of the top queued job
+    var live = Math.max(0, mem.live_free_gib), top = s.queue && s.queue.length ? s.queue[0] : null;
+    var scale = Math.max(s.machine.memsize_gib * 0.5, live, top ? top.memory_gib : 0, 1);
+    var lb = $("live-bar"); clear(lb);
+    lb.appendChild(seg("live", pct(live, scale), "live free " + fmtG(live)));
+    if (top) lb.appendChild(el("div", { class: "marker", style: "left:" + pct(top.memory_gib, scale) + "%", title: "top queued job needs " + fmtG(top.memory_gib) }));
+    $("live-text").textContent = "reclaimable " + fmtG(mem.reclaimable_gib) + " - pending " + fmtG(mem.pending_gib) + " - headroom " +
+      fmtG(mem.headroom_gib) + " = live free " + fmtG(live) + (top ? "; top queued job needs " + fmtG(top.memory_gib) : "");
+    var g = s.gpu;
+    if (g.exclusive_job) { $("gpu-big").textContent = "exclusive"; $("gpu-sub").textContent = "held by " + shortId(g.exclusive_job); }
+    else if (g.shared_jobs.length) { $("gpu-big").textContent = "shared " + g.shared_jobs.length + "/" + g.shared_max; $("gpu-sub").textContent = g.shared_jobs.map(shortId).join(", "); }
+    else { $("gpu-big").textContent = "idle"; $("gpu-sub").textContent = "shared slots 0/" + g.shared_max; }
+    if (g.device_util_pct != null) $("gpu-sub").textContent += (g.shared_jobs.length || g.exclusive_job ? " - " : "") + "device " + g.device_util_pct + "%";
+    $("cpu-big").textContent = s.cpu.used + " / " + s.cpu.budget + " cores";
+    $("cpu-sub").textContent = "soft limit";
+    var cb = $("cpu-bar"); clear(cb); cb.appendChild(seg("reserved", pct(s.cpu.used, s.cpu.budget), s.cpu.used + " of " + s.cpu.budget));
+    $("swap-big").textContent = mem.swap_known ? fmtG(mem.swap_used_gib, 2) : "unknown";
+    var rate = mem.swap_rise_gib_per_min;
+    $("swap-sub").textContent = (mem.swap_known ? "of " + fmtG(mem.swap_total_gib, 1) : "admissions paused (fail-closed)") +
+      (rate != null ? " - rise " + rate.toFixed(2) + " GiB/min" : "") + (mem.level != null ? " - level " + mem.level : "");
+  }
+
+  // ---------- tables ----------
+  function modeChip(c) { return chip(c, c === "atomic" ? "bad" : c === "cooperative" ? "warn" : "ok", "checkpoint mode: " + c); }
+  function gpuChip(g) { return chip(g === "exclusive" ? "gpu excl" : g === "shared" ? "gpu shared" : "cpu only", "gpu", "gpu: " + g); }
+  function flagChips(f) {
+    var out = [];
+    if (!f) return out;
+    if (f.spilled) out.push(chip("spilled", "bad", "checkpoint timed out; treated as atomic"));
+    if (f.over_limit) out.push(chip("over_limit", "bad"));
+    if (f.cancel_requested) out.push(chip("cancel requested", "warn"));
+    if (f.yield_requested) out.push(chip("yield requested", "warn"));
+    return out;
+  }
+  function renderRunning() {
+    var s = state.status; if (!s) return;
+    var tb = $("running"); clear(tb);
+    if (!s.running.length) { var r = el("tr"); var c = td("Nothing is running."); c.colSpan = 9; c.className = "empty"; r.appendChild(c); tb.appendChild(r); return; }
+    s.running.forEach(function (j) {
+      var fp = j.footprint_gib, rv = j.memory_gib, over = fp != null && fp > rv * 1.0001;
+      var mini = el("span", { class: "mini" + (over ? " over" : ""), title: fmtG(fp) + " of " + fmtG(rv) }, [el("span", { style: "width:" + Math.min(100, pct(fp || 0, rv)) + "%" })]);
+      var fpCell = el("span", null, [mini, " ", fmtG(fp) + " / " + fmtG(rv)]);
+      var rt = j.runtime_s, est = j.estimate_s, rtCell;
+      if (rt == null) rtCell = td("starting");
+      else if (est) {
+        var overrun = rt > est;
+        var pb = el("span", { class: "mini" + (overrun ? " overrun" : ""), title: "estimate " + fmtDur(est) }, [el("span", { style: "width:" + Math.min(100, pct(rt, est)) + "%" })]);
+        rtCell = td(el("span", null, [pb, " ", fmtDur(rt) + " / " + fmtDur(est), overrun ? chip("overrun", "warn") : null]));
+      } else rtCell = td(fmtDur(rt));
+      tb.appendChild(rowFor(j.job, [td(el("span", { class: "mono", text: shortId(j.job) })), td(j.project), td(j.name || ""), td(modeChip(j.checkpoint)),
+        td(gpuChip(j.gpu)), td(fpCell), rtCell, td(j.held_reason || j.state), td(el("span", null, flagChips(j.flags)))]));
+    });
+  }
+  function renderQueue() {
+    var s = state.status; if (!s) return;
+    var tb = $("queue"); clear(tb);
+    if (!s.queue.length) { var r = el("tr"); var c = td("The queue is empty."); c.colSpan = 10; c.className = "empty"; r.appendChild(c); tb.appendChild(r); return; }
+    s.queue.forEach(function (j) {
+      var blocks = (j.blocked_by || []).map(function (b) { return chip(b, blockClass(b), b); });
+      if (s.reservation === j.job) blocks.unshift(chip("reserved", "warn", "this job holds the reservation"));
+      var why = el("div", { class: "why", text: j.why || "" });
+      if (j.state === "needs_estimate") {
+        var cmd = "gsched estimate " + j.job + " 3h";
+        why.appendChild(document.createElement("br"));
+        why.appendChild(el("code", { text: cmd })); why.appendChild(document.createTextNode(" ")); why.appendChild(copyButton(cmd));
+      }
+      var ask = fmtG(j.memory_gib, 1) + " - " + (j.gpu === "none" ? "cpu" : j.gpu) + " - " + j.cpu_cores + "c";
+      tb.appendChild(rowFor(j.job, [td(j.position == null ? "-" : String(j.position)), td(el("span", { class: "mono", text: shortId(j.job) })), td(j.project),
+        td(j.name || ""), td(String(j.priority)), td(j.queue || "-"), td(ask), td(fmtDur(j.waiting_s)), td(el("span", null, blocks)), td(why)]));
+    });
+  }
+  function renderRecent() {
+    var tb = $("recent"); clear(tb);
+    var rec = state.jobs ? state.jobs.recent : [];
+    if (!rec.length) { var r = el("tr"); var c = td("Nothing finished in the last 24 hours."); c.colSpan = 7; c.className = "empty"; r.appendChild(c); tb.appendChild(r); return; }
+    rec.forEach(function (j) {
+      var rt = (j.started_ms && j.released_ms) ? (j.released_ms - j.started_ms) / 1000 : null;
+      var cls = j.state === "done" ? "ok" : j.state === "failed" || j.state === "lost" ? "bad" : "warn";
+      var pk = j.peak_footprint_gib != null ? fmtG(j.peak_footprint_gib) : "-";
+      var over = j.peak_footprint_gib != null && j.peak_footprint_gib > j.resources.memory_gib;
+      var why = (j.exit && j.exit.end_reason) || "";
+      if (j.exit && j.exit.code != null && j.exit.code !== 0) why += " (exit " + j.exit.code + ")";
+      if (j.exit && j.exit.signal != null) why += " (signal " + j.exit.signal + ")";
+      tb.appendChild(rowFor(j.job, [td(el("span", { class: "mono", text: shortId(j.job) })), td(j.project), td(j.name || ""), td(chip(j.state, cls)),
+        td(fmtDur(rt)), td(el("span", null, [pk + " / " + fmtG(j.resources.memory_gib), over ? chip("over", "bad", "peak exceeded the request") : null])), td(why)]));
+    });
+  }
+
+  // ---------- events ----------
+  function summarize(body) {
+    var parts = [];
+    for (var k in body) {
+      var v = body[k]; if (v == null) continue;
+      if (typeof v === "object") v = JSON.stringify(v);
+      var sv = String(v); if (sv.length > 60) sv = sv.slice(0, 57) + "...";
+      parts.push(k + "=" + sv);
+      if (parts.length >= 6) break;
+    }
+    return parts.join(" ");
+  }
+  function renderEvents() {
+    var ul = $("events"); clear(ul);
+    var evs = state.events.slice(0, 50);
+    if (!evs.length) { ul.appendChild(el("li", { class: "empty", text: "No events yet." })); return; }
+    evs.forEach(function (e) {
+      var li = el("li", null, [el("time", { text: clock(e.t_ms), title: new Date(e.t_ms).toString() }), el("span", { class: "k", text: e.kind }),
+        el("span", { class: "b", text: (e.job ? shortId(e.job) + " " : "") + summarize(e.body || {}) })]);
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------- timeline (hand-drawn SVG) ----------
+  function renderTimeline() {
+    var svg = $("tl"), NS = svg.namespaceURI; clear(svg);
+    var W = 900, H = 230, L = 44, R = 10, T = 10, B = 24;
+    var pts = state.timeline, now = state.status ? state.status.now_ms : Date.now();
+    var t1 = now, t0 = now - 6 * 3600 * 1000;
+    function mk(tag, attrs, text) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+    var budget = pts.length ? pts[pts.length - 1].budget_gib : (state.status ? state.status.memory.budget_gib : 40);
+    var ymax = budget;
+    pts.forEach(function (p) { ymax = Math.max(ymax, p.reclaimable_gib || 0, p.reserved_gib || 0, p.swap_used_gib || 0); });
+    ymax = Math.ceil(ymax * 1.08);
+    function X(t) { return L + (t - t0) / (t1 - t0) * (W - L - R); }
+    function Y(v) { return T + (1 - v / ymax) * (H - T - B); }
+    var nw = state.status && state.status.night_window;
+    if (nw) {
+      var DAY = 86400000, dur = (function () { var a = nw.start.split(":"), b = nw.end.split(":"); return (((+b[0]) * 60 + (+b[1]) - (+a[0]) * 60 - (+a[1]) + 1440) % 1440) * 60000; })();
+      for (var k = -2; k <= 1; k++) {
+        var e = nw.next_end_ms + k * DAY, s0 = e - dur;
+        var a = Math.max(s0, t0), b = Math.min(e, t1);
+        if (b > a) svg.appendChild(mk("rect", { x: X(a), y: T, width: X(b) - X(a), height: H - T - B, fill: "var(--c-time)", opacity: 0.12 }, null)).appendChild(mk("title", {}, "night window"));
+      }
+    }
+    ((state.status && state.status.reservations) || []).forEach(function (r) {
+      (r.windows || []).forEach(function (w) {
+        var a = Math.max(w.start_ms, t0), b = Math.min(w.end_ms, t1);
+        if (b > a) svg.appendChild(mk("rect", { x: X(a), y: T, width: X(b) - X(a), height: H - T - B, fill: "var(--c-policy)", opacity: 0.16 }, null))
+          .appendChild(mk("title", {}, "reservation " + r.name + " (" + r.start + "-" + r.end + "): " + fmtG(r.memory_gib, 0) + (r.gpu !== "none" ? " + GPU" : "") + " for " + r.project));
+      });
+    });
+    for (var i = 0; i <= 4; i++) {
+      var v = ymax * i / 4;
+      svg.appendChild(mk("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: "var(--line)", "stroke-width": 1 }));
+      svg.appendChild(mk("text", { x: L - 4, y: Y(v) + 3, "text-anchor": "end" }, v.toFixed(0)));
+    }
+    for (var h = 0; h <= 6; h++) {
+      var t = t0 + h * 3600000;
+      svg.appendChild(mk("text", { x: X(t), y: H - 8, "text-anchor": "middle" }, clock(t).slice(0, 5)));
+    }
+    function path(key, close) {
+      var d = "", first = true, lastx = L;
+      pts.forEach(function (p) { if (p[key] == null) return; var x = X(p.t_ms); d += (first ? "M" : "L") + x.toFixed(1) + " " + Y(p[key]).toFixed(1) + " "; first = false; lastx = x; });
+      if (first) return null;
+      if (close) { d += "L" + lastx.toFixed(1) + " " + Y(0) + " L" + X(pts[0].t_ms).toFixed(1) + " " + Y(0) + " Z"; }
+      return d;
+    }
+    var area = path("reserved_gib", true);
+    if (area) svg.appendChild(mk("path", { d: area, fill: "var(--bar-reserved)", opacity: 0.35 }));
+    svg.appendChild(mk("line", { x1: L, x2: W - R, y1: Y(budget), y2: Y(budget), stroke: "var(--ink)", "stroke-dasharray": "5 4", "stroke-width": 1 })).appendChild(mk("title", {}, "budget " + fmtG(budget)));
+    var rl = path("reclaimable_gib", false); if (rl) svg.appendChild(mk("path", { d: rl, fill: "none", stroke: "var(--ok)", "stroke-width": 1.6 }));
+    var sw = path("swap_used_gib", false); if (sw) svg.appendChild(mk("path", { d: sw, fill: "none", stroke: "var(--bad)", "stroke-width": 1.4, "stroke-dasharray": "2 2" }));
+    var tickKinds = { admit: "var(--ok)", exit: "var(--muted)", signal: "var(--warn)", pressure_enter: "var(--bad)", pressure_exit: "var(--info)", protective_enter: "var(--bad)", protective_exit: "var(--info)", lost: "var(--bad)" };
+    state.events.forEach(function (e) {
+      if (!tickKinds[e.kind] || e.t_ms < t0 || e.t_ms > t1) return;
+      var x = X(e.t_ms);
+      var ln = mk("line", { x1: x, x2: x, y1: T, y2: H - B, stroke: tickKinds[e.kind], "stroke-width": 1, opacity: 0.8 });
+      ln.appendChild(mk("title", {}, clock(e.t_ms) + " " + e.kind + (e.job ? " " + shortId(e.job) : "") + (e.body && e.body.sig ? " " + e.body.sig : "")));
+      svg.appendChild(ln);
+    });
+    if (!pts.length) svg.appendChild(mk("text", { x: W / 2, y: H / 2, "text-anchor": "middle" }, "No samples yet (one is recorded per minute)."));
+    var lg = $("tl-legend"); clear(lg);
+    [["var(--bar-reserved)", "reserved (area)"], ["var(--ok)", "reclaimable"], ["var(--bad)", "swap used"], ["var(--ink)", "budget (dashed)"], ["var(--warn)", "admit / exit / signal / pressure marks"], ["var(--c-policy)", "time reservation (shaded)"]].forEach(function (x) {
+      var sp = el("span"); var i = el("i"); i.style.background = x[0]; sp.appendChild(i); sp.appendChild(document.createTextNode(x[1])); lg.appendChild(sp);
+    });
+  }
+
+  // ---------- drawer ----------
+  function openDrawer(id) {
+    state.drawerJob = id; state.logStream = "stdout";
+    $("drawer").classList.add("open"); $("drawer").focus();
+    loadDrawer();
+  }
+  function closeDrawer() { state.drawerJob = null; $("drawer").classList.remove("open"); }
+  function kv(dl, k, v) { dl.appendChild(el("dt", { text: k })); dl.appendChild(el("dd", null, [v == null ? "-" : (typeof v === "string" ? v : v)])); }
+  function loadDrawer() {
+    var id = state.drawerJob; if (!id) return;
+    api("/api/job/" + id).then(function (r) { return r.json(); }).then(function (j) {
+      if (state.drawerJob !== id) return;
+      $("drawer-title").textContent = id + (j.name ? "  " + j.name : "");
+      var body = $("drawer-body"); clear(body);
+      var dl = el("dl", { class: "kv" });
+      kv(dl, "state", j.state + (j.held_reason ? " / " + j.held_reason : ""));
+      kv(dl, "project", j.project); kv(dl, "queue", (j.queue || "-") + ", priority " + j.priority);
+      kv(dl, "mode", j.checkpoint + ", " + j.spawn);
+      kv(dl, "resources", fmtG(j.resources.memory_gib) + ", gpu " + j.resources.gpu + ", " + j.resources.cpu_cores + " cores" + (j.resources.locks.length ? ", locks " + j.resources.locks.join(",") : ""));
+      kv(dl, "runtime", "estimate " + (j.runtime.estimate_s ? fmtDur(j.runtime.estimate_s) : "-") + ", limit " + (j.runtime.limit_s ? fmtDur(j.runtime.limit_s) : "-"));
+      kv(dl, "attempt", j.attempt + (j.resume ? " (resumed)" : ""));
+      kv(dl, "footprint", fmtG(j.footprint_gib) + " (peak " + fmtG(j.peak_footprint_gib) + ")");
+      kv(dl, "submitted", j.submitted); kv(dl, "started", j.started); kv(dl, "released", j.released);
+      if (j.blocked_by && j.blocked_by.length) kv(dl, "blocked by", el("span", null, j.blocked_by.map(function (b) { return chip(b, blockClass(b)); })));
+      if (j.why) kv(dl, "why", j.why);
+      kv(dl, "exit", j.exit ? ("code " + j.exit.code + ", signal " + j.exit.signal + ", " + (j.exit.end_reason || "-")) : "-");
+      var fl = Object.keys(j.flags || {}).filter(function (k) { return j.flags[k]; });
+      kv(dl, "flags", fl.length ? fl.join(", ") : "none");
+      kv(dl, "command", j.command_summary || "-"); kv(dl, "cwd", j.cwd);
+      if (j.after && j.after.length) kv(dl, "after", j.after.join(", "));
+      body.appendChild(dl);
+      var tabs = el("div", { class: "tabs", role: "tablist" });
+      ["stdout", "stderr"].forEach(function (s) {
+        tabs.appendChild(el("button", { class: "tab", role: "tab", "aria-selected": String(state.logStream === s), text: s, onclick: function () { state.logStream = s; loadDrawer(); } }));
+      });
+      tabs.appendChild(el("button", { class: "tab", type: "button", text: "refresh", onclick: function () { loadLog(id); } }));
+      body.appendChild(tabs);
+      body.appendChild(el("pre", { id: "log", tabindex: "0", "aria-label": "job output (last 16 KiB)" }));
+      var cmds = el("div", { class: "cmds" });
+      ["gsched get " + id, "gsched logs " + id + " --tail 4000", "gsched cancel " + id].forEach(function (c) {
+        cmds.appendChild(el("div", null, [el("code", { text: c }), copyButton(c)]));
+      });
+      cmds.appendChild(el("div", { class: "sub", text: "This page is read-only: there are no action buttons." }));
+      body.appendChild(cmds);
+      loadLog(id);
+    }).catch(function () { $("drawer-body").textContent = "Could not load this job."; });
+  }
+  function loadLog(id) {
+    api("/api/logs/" + id + "?stream=" + state.logStream).then(function (r) { return r.text(); }).then(function (t) {
+      var pre = $("log"); if (!pre || state.drawerJob !== id) return;
+      pre.textContent = t || "(empty)"; pre.scrollTop = pre.scrollHeight;
+    }).catch(function () {});
+  }
+  $("drawer-close").addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") closeDrawer(); });
+
+  // ---------- refresh loops ----------
+  function setBanner(down) { $("banner").style.display = down ? "block" : "none"; }
+  function refreshFast() {
+    return Promise.all([api("/api/status").then(function (r) { return r.json(); }), api("/api/jobs").then(function (r) { return r.json(); })])
+      .then(function (res) { state.status = res[0]; state.jobs = res[1]; setBanner(false); renderAll(); })
+      .catch(function (e) { if (String(e.message) === "daemon_unreachable") setBanner(true); else setBanner(true); });
+  }
+  function refreshSlow() {
+    return Promise.all([api("/api/timeline?hours=6").then(function (r) { return r.json(); }), api("/api/events?hours=24").then(function (r) { return r.json(); })])
+      .then(function (res) { state.timeline = res[0]; state.events = res[1]; renderTimeline(); renderEvents(); })
+      .catch(function () {});
+  }
+  function renderAll() { renderHeader(); renderCards(); renderRunning(); renderQueue(); renderRecent(); renderTimeline(); }
+  var fastTimer = null, slowTimer = null;
+  function start() {
+    refreshFast(); refreshSlow();
+    fastTimer = setInterval(function () { if (document.visibilityState === "visible") { refreshFast(); if (state.drawerJob) loadDrawerQuiet(); } }, 2000);
+    slowTimer = setInterval(function () { if (document.visibilityState === "visible") refreshSlow(); }, 30000);
+  }
+  function loadDrawerQuiet() { loadLog(state.drawerJob); }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { refreshFast(); refreshSlow(); } });
+  start();
+})();
+</script>
+</body>
+</html>

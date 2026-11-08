@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>{{LABEL}}</string>
+  <key>ProgramArguments</key><array>
+    <string>{{VENV_PYTHON}}</string><string>-I</string><string>-m</string><string>gsched</string><string>dashboard</string><string>--port</string><string>{{PORT}}</string>
+  </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>GSCHED_HOME</key><string>{{HOME_DIR}}</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>15</integer>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>{{HOME_DIR}}/logs/dashboard.out.log</string>
+  <key>StandardErrorPath</key><string>{{HOME_DIR}}/logs/dashboard.err.log</string>
+</dict></plist>
